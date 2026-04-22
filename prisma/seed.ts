@@ -1,21 +1,30 @@
-import { PrismaClient } from "@prisma/client";
-import { addDays, subDays, subHours, subMinutes } from "date-fns";
+import { PrismaClient } from '@prisma/client';
+import { subDays, subHours, addHours, addDays, format } from 'date-fns';
 
 const prisma = new PrismaClient();
 
-const SYSTEM_PROMPT = `You are a friendly and professional dental receptionist for Bright Smile Dental. Your role is to:
-1. Greet patients warmly and professionally
-2. Help schedule, reschedule, or cancel appointments
-3. Answer common questions about services (cleaning, checkups, whitening, emergencies, consultations)
-4. Provide office hours: Monday-Friday 8AM-6PM, Saturday 9AM-2PM, Closed Sunday
-5. Address: 123 Dental Way, Suite 100, Springfield
-6. Handle insurance inquiries - we accept most major dental insurance plans (Delta Dental, Cigna, Aetna, MetLife)
-7. For emergencies outside business hours, direct patients to call 911 or visit the nearest ER
-8. Collect patient name and phone number for new appointments
-9. Confirm appointment details before ending the call
-10. Transfer to a human receptionist if the patient requests or if you cannot help
+const firstNames = ['Sarah', 'Michael', 'Emma', 'James', 'Olivia', 'William', 'Sophia', 'Benjamin', 'Isabella', 'Lucas', 'Mia', 'Henry', 'Charlotte', 'Alexander', 'Amelia', 'Daniel', 'Harper', 'Matthew', 'Evelyn', 'Jackson', 'Emily', 'Sebastian', 'Liam', 'Ava', 'Noah'];
+const lastNames = ['Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez'];
+const insurances = ['Delta Dental PPO', 'Cigna Dental', 'Aetna Dental', 'MetLife Dental', 'Guardian Dental', 'Humana Dental', 'United Concordia', 'BlueCross BlueShield', null, null];
+const apptTypes = ['checkup', 'cleaning', 'emergency', 'consultation', 'whitening'];
+const outcomes = ['appointment_booked', 'rescheduled', 'cancelled', 'information', 'transferred', 'no_answer', 'voicemail'];
+const sentiments = ['positive', 'neutral', 'negative'];
+const directions = ['inbound', 'outbound'];
 
-Always be empathetic, clear, and concise. Never provide medical advice — only scheduling and general office information. If a patient expresses pain or a dental emergency, prioritize scheduling them as soon as possible.`;
+function randomFrom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function randomBetween(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomPhone(): string {
+  const area = randomFrom(['212', '310', '312', '415', '512', '617', '646', '702', '720', '832', '949', '956', '206', '404', '469']);
+  const mid = String(randomBetween(200, 999));
+  const end = String(randomBetween(1000, 9999));
+  return `(${area}) ${mid}-${end}`;
+}
 
 async function main() {
   // Clear existing data
@@ -24,144 +33,216 @@ async function main() {
   await prisma.patient.deleteMany();
   await prisma.agentConfig.deleteMany();
 
-  // Create patients
-  const patients = await prisma.patient.createMany({
-    data: [
-      { firstName: "Sarah", lastName: "Johnson", phone: "(555) 234-5678", email: "sarah.johnson@email.com", dateOfBirth: "1985-03-15", insurance: "Delta Dental PPO", notes: "Prefers morning appointments" },
-      { firstName: "Michael", lastName: "Chen", phone: "(555) 345-6789", email: "mchen@email.com", dateOfBirth: "1990-07-22", insurance: "Cigna Dental", notes: "Allergic to latex" },
-      { firstName: "Emily", lastName: "Rodriguez", phone: "(555) 456-7890", email: "emily.r@email.com", dateOfBirth: "1978-11-08", insurance: "Aetna Dental", notes: "" },
-      { firstName: "James", lastName: "Williams", phone: "(555) 567-8901", email: "jwilliams@email.com", dateOfBirth: "1995-01-30", insurance: "MetLife Dental", notes: "New patient - referred by Dr. Smith" },
-      { firstName: "Lisa", lastName: "Thompson", phone: "(555) 678-9012", email: "lisa.t@email.com", dateOfBirth: "1982-09-14", insurance: "Delta Dental HMO", notes: "Anxiety patient - needs extra care" },
-      { firstName: "David", lastName: "Kim", phone: "(555) 789-0123", email: "dkim@email.com", dateOfBirth: "1988-05-20", insurance: "United Healthcare Dental", notes: "" },
-      { firstName: "Amanda", lastName: "Davis", phone: "(555) 890-1234", email: "amanda.d@email.com", dateOfBirth: "1992-12-03", insurance: "", notes: "Self-pay patient" },
-      { firstName: "Robert", lastName: "Martinez", phone: "(555) 901-2345", email: "rmartinez@email.com", dateOfBirth: "1975-04-18", insurance: "Cigna Dental", notes: "Regular 6-month checkups" },
-      { firstName: "Jennifer", lastName: "Anderson", phone: "(555) 012-3456", email: "janderson@email.com", dateOfBirth: "1983-08-27", insurance: "Aetna Dental", notes: "Whitening consultation needed" },
-      { firstName: "Christopher", lastName: "Taylor", phone: "(555) 123-4567", email: "ctaylor@email.com", dateOfBirth: "1997-02-11", insurance: "MetLife Dental", notes: "" },
-      { firstName: "Nicole", lastName: "Brown", phone: "(555) 234-5679", email: "nbrown@email.com", dateOfBirth: "1989-06-25", insurance: "Delta Dental PPO", notes: "Emergency contact: John Brown (555) 234-5680" },
-      { firstName: "Thomas", lastName: "Wilson", phone: "(555) 345-6790", email: "twilson@email.com", dateOfBirth: "1980-10-09", insurance: "Guardian Dental", notes: "Needs crown replacement" },
-      { firstName: "Jessica", lastName: "Garcia", phone: "(555) 456-7891", email: "jgarcia@email.com", dateOfBirth: "1993-07-31", insurance: "Humana Dental", notes: "" },
-      { firstName: "Daniel", lastName: "Lee", phone: "(555) 567-8902", email: "dlee@email.com", dateOfBirth: "1986-03-19", insurance: "Cigna Dental", notes: "Prefers Dr. Patterson" },
-      { firstName: "Rachel", lastName: "Moore", phone: "(555) 678-9013", email: "rmoore@email.com", dateOfBirth: "1991-11-22", insurance: "Aetna Dental", notes: "Orthodontic consultation follow-up" },
-      { firstName: "Kevin", lastName: "Clark", phone: "(555) 789-0124", email: "kclark@email.com", dateOfBirth: "1974-01-07", insurance: "Delta Dental", notes: "Wisdom teeth evaluation needed" },
-      { firstName: "Megan", lastName: "Harris", phone: "(555) 890-1235", email: "mharris@email.com", dateOfBirth: "1998-09-05", insurance: "", notes: "New patient" },
-      { firstName: "Brian", lastName: "Lewis", phone: "(555) 901-2346", email: "blewis@email.com", dateOfBirth: "1981-04-29", insurance: "MetLife Dental", notes: "Regular patient" },
-    ],
-  });
-
-  const allPatients = await prisma.patient.findMany();
-
-  // Helper to get random patient
-  const rp = () => allPatients[Math.floor(Math.random() * allPatients.length)];
-  const now = new Date();
-
-  // Create appointments
-  const appointmentData = [
-    { patientId: allPatients[0].id, date: addDays(now, 1).toISOString(), duration: 30, type: "cleaning", status: "confirmed", notes: "Regular cleaning" },
-    { patientId: allPatients[1].id, date: addDays(now, 1).toISOString(), duration: 45, type: "checkup", status: "scheduled", notes: "Annual checkup" },
-    { patientId: allPatients[2].id, date: addDays(now, 2).toISOString(), duration: 60, type: "emergency", status: "confirmed", notes: "Tooth pain - upper right" },
-    { patientId: allPatients[3].id, date: addDays(now, 3).toISOString(), duration: 30, type: "consultation", status: "scheduled", notes: "New patient consultation" },
-    { patientId: allPatients[4].id, date: addDays(now, 5).toISOString(), duration: 30, type: "cleaning", status: "scheduled", notes: "" },
-    { patientId: allPatients[5].id, date: addDays(now, 7).toISOString(), duration: 60, type: "whitening", status: "confirmed", notes: "Zoom whitening procedure" },
-    { patientId: allPatients[6].id, date: subDays(now, 1).toISOString(), duration: 30, type: "checkup", status: "completed", notes: "Routine checkup" },
-    { patientId: allPatients[7].id, date: subDays(now, 2).toISOString(), duration: 45, type: "cleaning", status: "completed", notes: "" },
-    { patientId: allPatients[8].id, date: addDays(now, 4).toISOString(), duration: 30, type: "consultation", status: "scheduled", notes: "Whitening options" },
-    { patientId: allPatients[9].id, date: subDays(now, 3).toISOString(), duration: 30, type: "checkup", status: "no-show", notes: "Patient did not show" },
-    { patientId: allPatients[10].id, date: addDays(now, 6).toISOString(), duration: 30, type: "cleaning", status: "scheduled", notes: "" },
-    { patientId: allPatients[11].id, date: addDays(now, 10).toISOString(), duration: 60, type: "checkup", status: "scheduled", notes: "Crown replacement consultation" },
-    { patientId: allPatients[12].id, date: subDays(now, 5).toISOString(), duration: 30, type: "emergency", status: "completed", notes: "Chipped tooth repair" },
-    { patientId: allPatients[0].id, date: subDays(now, 7).toISOString(), duration: 30, type: "cleaning", status: "completed", notes: "" },
-    { patientId: allPatients[13].id, date: addDays(now, 8).toISOString(), duration: 30, type: "checkup", status: "scheduled", notes: "" },
-  ];
-
-  await prisma.appointment.createMany({ data: appointmentData });
-
-  // Create calls
-  const outcomes = ["appointment_booked", "rescheduled", "cancelled", "information", "voicemail", "no_answer", "transferred", "spam"];
-  const sentiments = ["positive", "neutral", "negative"];
-  const directions = ["inbound", "outbound"];
-  const statuses = ["completed", "completed", "completed", "completed", "failed", "voicemail", "transferred"];
-
-  const transcripts = [
-    "Patient called to schedule a routine cleaning. Collected name and phone number. Booked appointment for next Tuesday at 10 AM. Patient confirmed.",
-    "Patient inquired about whitening services. Provided information about Zoom whitening and take-home kits. Scheduled consultation.",
-    "Patient called to cancel tomorrow's appointment due to work conflict. Rescheduled to Friday at 2 PM.",
-    "New patient calling for information about services and pricing. Provided overview and scheduled initial consultation.",
-    "Patient reported tooth pain since yesterday. Scheduled emergency appointment for same day at 3 PM. Advised to take over-the-counter pain relief.",
-    "Patient called to confirm their upcoming appointment. Confirmed details: Thursday at 11 AM for cleaning.",
-    "Patient inquired about insurance acceptance. Confirmed we accept Delta Dental, Cigna, Aetna, and MetLife.",
-    "Patient requested to be transferred to human receptionist regarding billing question. Transferred successfully.",
-    "Left voicemail confirming appointment details for upcoming visit on Monday.",
-    "No answer - left voicemail requesting callback to schedule 6-month checkup.",
-    "Patient expressed dissatisfaction with wait times during last visit. Apologized and offered priority scheduling for next appointment.",
-    "Patient asked about office hours and location. Provided: Mon-Fri 8AM-6PM, Sat 9AM-2PM, 123 Dental Way Suite 100, Springfield.",
-    "Spam call - telemarketer offering dental supplies. Politely declined.",
-    "Patient called to reschedule from morning to afternoon. Moved appointment from 9 AM to 3 PM same day.",
-    "Patient called with questions about post-procedure care after crown placement. Provided general care instructions.",
-    "Patient requested appointment for child's first dental visit. Scheduled pediatric consultation.",
-    "Called patient to remind about upcoming appointment tomorrow. Patient confirmed attendance.",
-    "Patient inquired about emergency services. Explained same-day emergency availability.",
-    "Patient called to update insurance information from Cigna to Aetna. Updated records.",
-    "Patient expressed gratitude for excellent service during last visit. Noted positive feedback.",
-    "Patient asked about teeth whitening options and pricing. Provided detailed information about in-office and take-home options.",
-    "Patient requested referral to orthodontist. Provided referral information for Dr. Park.",
-    "Patient called to cancel appointment due to illness. Will call back to reschedule when feeling better.",
-    "Insurance verification call. Confirmed patient's Delta Dental coverage is active.",
-    "Patient asked about payment plans for major dental work. Explained available financing options.",
-    "Patient called to confirm address for GPS navigation. Provided: 123 Dental Way, Suite 100, Springfield.",
-    "Outbound call to follow up on missed appointment. Patient requested reschedule - booked for next week.",
-    "Patient inquired about Invisalign consultation. Scheduled initial assessment.",
-    "Patient called about billing discrepancy. Transferred to billing department for resolution.",
-  ];
-
-  const callData = [];
-  for (let i = 0; i < 30; i++) {
-    const hasPatient = Math.random() > 0.1;
-    const patient = hasPatient ? rp() : null;
-    const status = statuses[Math.floor(Math.random() * statuses.length)];
-    const duration = status === "completed" ? Math.floor(Math.random() * 300) + 30 : status === "voicemail" ? Math.floor(Math.random() * 60) + 10 : null;
-    const outcome = status === "completed" ? outcomes[Math.floor(Math.random() * outcomes.length)] : null;
-    const sentiment = status === "completed" && !["spam", "no_answer"].includes(outcome!) ? sentiments[Math.floor(Math.random() * sentiments.length)] : null;
-    const hoursAgo = Math.floor(Math.random() * 720) + 1; // up to 30 days ago
-    const createdAt = subHours(now, hoursAgo);
-
-    callData.push({
-      patientId: patient?.id || null,
-      direction: directions[Math.floor(Math.random() * directions.length)],
-      status,
-      duration,
-      outcome,
-      transcript: status === "completed" && hasPatient ? transcripts[i % transcripts.length] : null,
-      sentiment,
-      providerCallId: `call_${Date.now()}_${i}`,
-      createdAt: createdAt.toISOString(),
-    });
-  }
-
-  await prisma.call.createMany({ data: callData });
-
   // Create agent config
   await prisma.agentConfig.create({
     data: {
-      name: "Dental Receptionist",
-      provider: "vapi",
-      voiceId: "alloy",
-      model: "gpt-4o",
-      systemPrompt: SYSTEM_PROMPT,
-      welcomeMessage: "Good morning! Thank you for calling Bright Smile Dental. This is your AI dental assistant. How can I help you today?",
+      name: 'Bright Smile Dental Receptionist',
+      provider: 'vapi',
+      voiceId: 'nova',
+      model: 'gpt-4o',
+      systemPrompt: `You are the friendly and professional AI receptionist for Bright Smile Dental, a modern dental practice in Austin, TX.
+
+YOUR ROLE:
+- Answer incoming calls warmly and professionally
+- Help patients schedule, reschedule, or cancel appointments
+- Provide office hours: Mon-Fri 8AM-6PM, Sat 9AM-2PM, Sun Closed
+- Answer common questions about services, insurance, parking, and location
+- Transfer complex or urgent matters to a human staff member
+
+SERVICES WE OFFER:
+- General checkups and cleanings
+- Teeth whitening (in-office and take-home kits)
+- Emergency dental care
+- Cosmetic consultations
+- Pediatric dentistry
+- Root canals, crowns, and fillings
+- Orthodontic referrals
+
+INSURANCE WE ACCEPT:
+- Delta Dental PPO, Cigna, Aetna, MetLife, Guardian, Humana
+- We also offer a 15% discount for self-pay patients
+- Payment plans available for treatments over $500
+
+LOCATION & PARKING:
+- 1234 Medical Parkway, Suite 200, Austin, TX 78731
+- Free parking in the attached garage, Level 2
+- Near bus route #5 (Medical Center stop)
+
+IMPORTANT RULES:
+- Always be polite, patient, and empathetic
+- Never make medical diagnoses or give medical advice
+- If a patient sounds distressed or in pain, prioritize scheduling them ASAP
+- Always confirm appointment details before hanging up
+- If you cannot help, transfer to the front desk at the configured number
+- Keep calls under 5 minutes unless the patient needs more time`,
+      welcomeMessage: 'Good morning! Thank you for calling Bright Smile Dental. My name is Alex, how can I help you today?',
       maxDuration: 300,
-      transferNumber: "+15551002000",
-      languages: "en",
+      transferNumber: '+15125551999',
+      languages: 'en',
       isActive: true,
     },
   });
 
-  console.log("Seed data created successfully!");
-  console.log(`- ${allPatients.length} patients`);
-  console.log(`- ${appointmentData.length} appointments`);
-  console.log(`- ${callData.length} calls`);
-  console.log("- 1 agent config");
+  // Create patients
+  const patients = [];
+  const patientCount = 42;
+  for (let i = 0; i < patientCount; i++) {
+    const firstName = firstNames[i % firstNames.length];
+    const lastName = lastNames[i % lastNames.length];
+    const phone = randomPhone();
+    const dobYear = randomBetween(1955, 2005);
+    const dobMonth = randomBetween(1, 12);
+    const dobDay = randomBetween(1, 28);
+
+    patients.push(
+      await prisma.patient.create({
+        data: {
+          firstName,
+          lastName,
+          phone,
+          email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}${randomBetween(1, 99)}@email.com`,
+          dateOfBirth: `${dobYear}-${String(dobMonth).padStart(2, '0')}-${String(dobDay).padStart(2, '0')}`,
+          insurance: randomFrom(insurances),
+          notes: i < 5 ? 'New patient - first visit' : i < 10 ? 'Prefers morning appointments' : null,
+        },
+      })
+    );
+  }
+
+  // Create calls over the last 30 days
+  const calls = [];
+  for (let i = 0; i < 180; i++) {
+    const daysAgo = randomBetween(0, 29);
+    const hoursAgo = randomBetween(0, 23);
+    const callDate = subDays(new Date(), daysAgo);
+    callDate.setHours(hoursAgo, randomBetween(0, 59), randomBetween(0, 59), 0);
+
+    const direction = randomFrom(directions);
+    const outcome = randomFrom(outcomes);
+    const duration = outcome === 'no_answer' ? 0 : outcome === 'voicemail' ? randomBetween(10, 30) : randomBetween(45, 420);
+    const status = outcome === 'no_answer' ? 'failed' : 'completed';
+
+    // Generate transcript for completed calls
+    const transcript = outcome !== 'no_answer' ? generateTranscript(outcome, direction) : null;
+
+    calls.push(
+      await prisma.call.create({
+        data: {
+          patientId: randomFrom(patients).id,
+          direction,
+          status,
+          duration,
+          outcome,
+          transcript,
+          sentiment: randomFrom(sentiments),
+          providerCallId: `call_${randomBetween(100000, 999999)}`,
+          createdAt: callDate,
+        },
+      })
+    );
+  }
+
+  // Create upcoming appointments
+  const appointmentNotes = [
+    'Patient requested 2pm slot',
+    'Follow-up from cleaning last month',
+    'Emergency consultation - reported tooth pain',
+    null,
+    'First visit - needs full exam',
+    'Insurance verification pending',
+    null,
+    'Referred by Dr. Smith',
+    null,
+    'Requested hygienist: Maria',
+  ];
+
+  for (let i = 0; i < 25; i++) {
+    const daysAhead = randomBetween(0, 21);
+    const hour = randomBetween(8, 17);
+    const minute = randomFrom([0, 15, 30, 45]);
+    const apptDate = addDays(new Date(), daysAhead);
+    apptDate.setHours(hour, minute, 0, 0);
+
+    const status = daysAhead === 0 ? 'confirmed' : randomFrom(['scheduled', 'confirmed', 'scheduled', 'scheduled', 'confirmed']);
+
+    // Only create if it's in the future
+    if (apptDate > new Date()) {
+      await prisma.appointment.create({
+        data: {
+          patientId: randomFrom(patients).id,
+          date: apptDate,
+          duration: randomFrom([30, 30, 30, 45, 60, 60, 90]),
+          type: randomFrom(apptTypes),
+          status,
+          notes: randomFrom(appointmentNotes),
+        },
+      });
+    }
+  }
+
+  // Create some past appointments
+  for (let i = 0; i < 35; i++) {
+    const daysAgo = randomBetween(1, 45);
+    const hour = randomBetween(8, 17);
+    const minute = randomFrom([0, 15, 30, 45]);
+    const apptDate = subDays(new Date(), daysAgo);
+    apptDate.setHours(hour, minute, 0, 0);
+
+    const status = randomFrom(['completed', 'completed', 'completed', 'cancelled', 'no-show']);
+
+    await prisma.appointment.create({
+      data: {
+        patientId: randomFrom(patients).id,
+        date: apptDate,
+        duration: randomFrom([30, 30, 45, 60, 90]),
+        type: randomFrom(apptTypes),
+        status,
+        notes: randomFrom(appointmentNotes),
+      },
+    });
+  }
+
+  console.log('Seed complete:');
+  console.log(`  - ${patientCount} patients created`);
+  console.log(`  - ${calls.length} calls created`);
+  console.log(`  - 60 appointments created`);
+  console.log(`  - 1 agent config created`);
+}
+
+function generateTranscript(outcome: string, direction: string): string {
+  const transcripts: Record<string, string[]> = {
+    appointment_booked: [
+      `Agent: Good morning! Thank you for calling Bright Smile Dental, this is Alex. How can I help you today?\nPatient: Hi, I'd like to schedule a cleaning appointment.\nAgent: Of course! I'd be happy to help with that. Let me check our available times. When works best for you?\nPatient: Sometime next week, preferably Tuesday morning.\nAgent: Great news — we have Tuesday at 9:15 AM and 10:30 AM available. Which would you prefer?\nPatient: 9:15 sounds perfect.\nAgent: Wonderful! I have you down for a teeth cleaning on Tuesday at 9:15 AM. Could I get your name and phone number to confirm?\nPatient: Sure, it's [patient name], [phone number].\nAgent: Perfect, you're all set! We'll send you a reminder the day before. Is there anything else I can help with?\nPatient: No, that's it. Thank you!\nAgent: You're welcome! See you Tuesday, have a great day!`,
+      `Agent: Good afternoon, Bright Smile Dental, Alex speaking.\nPatient: Hello, I need to book a checkup. It's been about a year since my last visit.\nAgent: Welcome back! Let me pull up your records. I can get you in this Thursday at 2 PM or Friday at 11 AM. Do either of those work?\nPatient: Thursday at 2 works.\nAgent: Excellent! I've scheduled your checkup for Thursday at 2 PM. We'll do a full exam and cleaning. Do you have any updated insurance information?\nPatient: Same as before, Delta Dental.\nAgent: Perfect, that's on file. We'll verify your coverage before your visit. Anything else I can help with?\nPatient: No, thanks!\nAgent: See you Thursday!`,
+    ],
+    rescheduled: [
+      `Agent: Good morning, Bright Smile Dental!\nPatient: Hi, I have an appointment on Wednesday but I need to reschedule. Something came up at work.\nAgent: No problem at all! Let me find a new time for you. How about Friday at 3 PM instead?\nPatient: That would work great.\nAgent: Done! I've moved your appointment to Friday at 3 PM. We'll send you the updated confirmation. Anything else?\nPatient: No, that's all. Thanks for being flexible.\nAgent: Happy to help! See you Friday.`,
+    ],
+    cancelled: [
+      `Agent: Good morning, Bright Smile Dental!\nPatient: Hi, I need to cancel my appointment next week. I'm going out of town unexpectedly.\nAgent: I'm sorry to hear that, but I can certainly cancel that for you. Would you like to reschedule for when you return?\nPatient: Not right now, I'll call back when I know my schedule.\nAgent: Absolutely. Your appointment has been cancelled. Feel free to call us anytime to book a new one. Have a safe trip!\nPatient: Thank you, goodbye.\nAgent: Goodbye!`,
+    ],
+    information: [
+      `Agent: Thank you for calling Bright Smile Dental, Alex speaking!\nPatient: Hi, I was wondering what your office hours are and if you accept Cigna insurance?\nAgent: Great questions! We're open Monday through Friday 8 AM to 6 PM, and Saturday 9 AM to 2 PM. We're closed on Sundays. And yes, we do accept Cigna Dental plans!\nPatient: Perfect. And where are you located?\nAgent: We're at 1234 Medical Parkway, Suite 200, in Austin. There's free parking in the attached garage on Level 2.\nPatient: Great, thanks!\nAgent: Would you like to schedule an appointment?\nPatient: Not today, but I'll keep you in mind.\nAgent: Sounds good! Have a wonderful day!`,
+      `Agent: Bright Smile Dental, how can I help you?\nPatient: Hi, do you do teeth whitening? And what's the cost?\nAgent: Yes, we do! We offer both in-office whitening for $399 and take-home kits for $199. The in-office treatment takes about an hour and gives immediate results, while the take-home kit gives gradual results over two weeks.\nPatient: Interesting. Do you have any payment plans?\nAgent: We do! For treatments over $500, we offer 6-month interest-free financing. We also give a 15% discount for self-pay patients.\nPatient: That's helpful, thank you.\nAgent: Would you like to book a whitening consultation?\nPatient: Let me think about it and I'll call back.\nAgent: Of course! We're here anytime. Have a great day!`,
+    ],
+    transferred: [
+      `Agent: Good morning, Bright Smile Dental!\nPatient: Hi, I have a question about my bill from last month. The charges don't match what my insurance said they'd cover.\nAgent: I understand billing questions can be frustrating. Let me transfer you to our billing coordinator who can look into this for you right away. Please hold for just a moment.\nPatient: Thank you.\nAgent: Transferring now...`,
+    ],
+    voicemail: [
+      `[Voicemail] Hi, this is a message for Bright Smile Dental. My name is [patient name] and my number is [phone number]. I was hoping to schedule a cleaning sometime next week. Give me a call back when you get a chance. Thanks!`,
+    ],
+  };
+
+  const options = transcripts[outcome] || transcripts['information']!;
+  return randomFrom(options);
 }
 
 main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect());
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });
