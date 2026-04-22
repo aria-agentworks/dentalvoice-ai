@@ -12,13 +12,14 @@ import {
   ChevronRight,
   Shield,
   Activity,
+  Mic,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
 
-export type ViewType = 'dashboard' | 'calls' | 'appointments' | 'patients' | 'settings' | 'analytics';
+export type ViewType = 'dashboard' | 'calls' | 'appointments' | 'patients' | 'settings' | 'analytics' | 'voice-demo';
 
 interface SidebarProps {
   activeView: ViewType;
@@ -29,6 +30,7 @@ interface SidebarProps {
 
 const navItems: { id: ViewType; label: string; icon: React.ElementType }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'voice-demo', label: 'Voice Demo', icon: Mic },
   { id: 'calls', label: 'Call History', icon: Phone },
   { id: 'appointments', label: 'Appointments', icon: CalendarDays },
   { id: 'patients', label: 'Patients', icon: Users },

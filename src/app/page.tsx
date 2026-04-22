@@ -8,6 +8,7 @@ import { AppointmentsView } from '@/components/views/appointments-view';
 import { PatientsView } from '@/components/views/patients-view';
 import { AnalyticsView } from '@/components/views/analytics-view';
 import { SettingsView } from '@/components/views/settings-view';
+import { VoiceDemoView } from '@/components/views/voice-demo-view';
 
 export default function Home() {
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
@@ -39,6 +40,8 @@ export default function Home() {
         return <AnalyticsView />;
       case 'settings':
         return <SettingsView />;
+      case 'voice-demo':
+        return <VoiceDemoView />;
       default:
         return <DashboardView />;
     }
@@ -77,7 +80,7 @@ export default function Home() {
           </div>
           {/* Mobile Nav Tabs */}
           <div className="flex gap-1 mt-3 overflow-x-auto pb-1 -mx-1 px-1">
-            {(['dashboard', 'calls', 'appointments', 'patients', 'analytics', 'settings'] as ViewType[]).map((view) => (
+            {(['dashboard', 'voice-demo', 'calls', 'appointments', 'patients', 'analytics', 'settings'] as ViewType[]).map((view) => (
               <button
                 key={view}
                 onClick={() => setActiveView(view)}
@@ -87,7 +90,7 @@ export default function Home() {
                     : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                 }`}
               >
-                {view.charAt(0).toUpperCase() + view.slice(1)}
+                {view === 'voice-demo' ? 'Voice Demo' : view.charAt(0).toUpperCase() + view.slice(1)}
               </button>
             ))}
           </div>
