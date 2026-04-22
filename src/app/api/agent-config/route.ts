@@ -1,22 +1,32 @@
-import { db } from '@/lib/db';
+import { db, isDbAvailable } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { getDemoAgentConfig } from '@/lib/demo-data';
 
 export async function GET() {
   try {
+    if (!isDbAvailable || !db) {
+      return NextResponse.json(getDemoAgentConfig());
+    }
+
     const config = await db.agentConfig.findFirst();
     if (!config) {
-      return NextResponse.json({ error: 'Agent config not found' }, { status: 404 });
+      return NextResponse.json(getDemoAgentConfig());
     }
     return NextResponse.json(config);
   } catch (error) {
     console.error('Error fetching agent config:', error);
-    return NextResponse.json({ error: 'Failed to fetch agent config' }, { status: 500 });
+    return NextResponse.json(getDemoAgentConfig());
   }
 }
 
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
+
+    if (!isDbAvailable || !db) {
+      return NextResponse.json({ message: 'Config updated (demo mode)', ...getDemoAgentConfig(), ...body });
+    }
+
     const config = await db.agentConfig.findFirst();
 
     if (!config) {

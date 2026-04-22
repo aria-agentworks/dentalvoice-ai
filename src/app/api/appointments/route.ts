@@ -1,17 +1,23 @@
-import { db } from '@/lib/db';
+import { db, isDbAvailable } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { getDemoAppointments } from '@/lib/demo-data';
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '50');
+
+    if (!isDbAvailable || !db) {
+      return NextResponse.json(getDemoAppointments(page, limit));
+    }
+
     const status = searchParams.get('status');
     const type = searchParams.get('type');
     const patientId = searchParams.get('patientId');
     const from = searchParams.get('from');
     const to = searchParams.get('to');
     const upcoming = searchParams.get('upcoming');
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
 
     const where: Record<string, unknown> = {};
 
@@ -44,7 +50,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ appointments, total, page, limit });
   } catch (error) {
     console.error('Error fetching appointments:', error);
-    return NextResponse.json({ error: 'Failed to fetch appointments' }, { status: 500 });
+    return NextResponse.json(getDemoAppointments());
   }
 }
 
@@ -55,6 +61,10 @@ export async function POST(req: NextRequest) {
 
     if (!patientId || !date) {
       return NextResponse.json({ error: 'Patient ID and date are required' }, { status: 400 });
+    }
+
+    if (!isDbAvailable || !db) {
+      return NextResponse.json({ message: 'Appointment recorded (demo mode)', ...body }, { status: 201 });
     }
 
     const appointment = await db.appointment.create({
