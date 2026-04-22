@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Patient {
+  id          String   @id @default(cuid())
+  firstName   String
+  lastName    String
+  phone       String   @unique
+  email       String?
+  dateOfBirth String?
+  insurance   String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  calls       Call[]
+  appointments Appointment[]
+}
+
+model Appointment {
+  id          String   @id @default(cuid())
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  date        DateTime
+  duration    Int      @default(30)
+  type        String   @default("checkup")
+  status      String   @default("scheduled")
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Call {
+  id            String   @id @default(cuid())
+  patientId     String?
+  patient       Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  direction     String   @default("inbound")
+  status        String   @default("completed")
+  duration      Int?
+  outcome       String?
+  recordingUrl  String?
+  transcript    String?
+  sentiment     String?
+  providerCallId String?
+  createdAt     DateTime @default(now())
+}
+
+model AgentConfig {
+  id             String   @id @default(cuid())
+  name           String   @default("Dental Receptionist")
+  provider       String   @default("vapi")
+  voiceId        String?
+  model          String   @default("gpt-4o")
+  systemPrompt   String
+  welcomeMessage String?
+  maxDuration    Int      @default(300)
+  transferNumber String?
+  languages      String   @default("en")
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
