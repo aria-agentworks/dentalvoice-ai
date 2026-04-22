@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { db, isDbAvailable } from '@/lib/db';
 
-const DENTAL_SYSTEM_PROMPT = `You are Sarah, a friendly and professional dental receptionist at Bright Smile Dental Care. Your personality is warm, empathetic, and efficient.
+const DENTAL_SYSTEM_PROMPT = `You are Sarah, a friendly and professional dental receptionist at AA Dental. Your personality is warm, empathetic, and efficient.
 
 Key Information:
-- Office: Bright Smile Dental Care, located at 123 Dental Avenue, Suite 200
+- Office: AA Dental, located at 123 Dental Avenue, Suite 200
 - Phone: (555) 123-4567
 - Hours: Monday-Friday 8AM-6PM, Saturday 9AM-2PM, Closed Sundays
 - Emergency line available 24/7 at the same number
@@ -45,7 +45,7 @@ Guidelines:
 - Keep conversations concise but caring
 - Never discuss specific medical diagnoses - direct those to the dentist`;
 
-const DENTAL_WELCOME = "Good morning! Thank you for calling Bright Smile Dental Care. This is Sarah, how can I help you today?";
+const DENTAL_WELCOME = "Good morning! Thank you for calling AA Dental. This is Sarah, how can I help you today?";
 
 // POST /api/vapi/assistant — Create a Vapi assistant
 export async function POST() {

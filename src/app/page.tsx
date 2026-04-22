@@ -69,7 +69,7 @@ export default function Home() {
                 </svg>
               </div>
               <div>
-                <h1 className="text-sm font-bold text-slate-900">DentalVoice AI</h1>
+                <h1 className="text-sm font-bold text-slate-900">AA Dental Voice AI</h1>
                 <p className="text-[10px] text-slate-400">Front Desk Agent</p>
               </div>
             </div>

@@ -53,7 +53,7 @@ export function Sidebar({ activeView, onViewChange, collapsed, onToggleCollapse 
         </div>
         {!collapsed && (
           <div className="min-w-0">
-            <h1 className="text-base font-bold text-slate-900 tracking-tight truncate">DentalVoice AI</h1>
+            <h1 className="text-base font-bold text-slate-900 tracking-tight truncate">AA Dental Voice AI</h1>
             <p className="text-[10px] text-slate-400 font-medium">Front Desk Agent</p>
           </div>
         )}

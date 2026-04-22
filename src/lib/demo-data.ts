@@ -185,7 +185,7 @@ export function getDemoAgentConfig() {
     voiceId: 'nova',
     model: 'gpt-4o',
     systemPrompt: 'Dental front desk AI agent system prompt...',
-    welcomeMessage: 'Good morning! Thank you for calling Bright Smile Dental Care.',
+    welcomeMessage: 'Good morning! Thank you for calling AA Dental.',
     maxDuration: 300,
     transferNumber: null,
     languages: 'en',

@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DentalVoice AI — Smart Front Desk Agent",
-  description: "AI-powered dental front desk voice agent for Bright Smile Dental. Manage calls, appointments, and patients with intelligent automation.",
+  title: "AA Dental Voice AI — Smart Front Desk Agent",
+  description: "AI-powered dental front desk voice agent. Manage calls, appointments, and patients with intelligent automation.",
   icons: {
     icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
